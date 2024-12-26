@@ -1,6 +1,8 @@
 # Node modules
 node_modules/
 
+auth
+
 # Logs
 logs
 *.log

@@ -36,6 +36,8 @@ export async function startWhatsAppBot(): Promise<void> {
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, qr, lastDisconnect } = update;
+        console.log(connection);
+        
 
         if (qr) {
             try {
