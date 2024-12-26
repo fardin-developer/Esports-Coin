@@ -1,52 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { getWhatsAppSocket } from '../services';
 import { proto } from '@whiskeysockets/baileys'; // Importing Baileys types
+import { WhatsAppService } from '../services/WhatsappService';
 
+const whatsappService = WhatsAppService.getInstance();
 const router = Router();
 
-// Auto-reply and send message endpoint
 router.post('/send', async (req: Request, res: Response) => {
-    const { to, message }: { to: string; message: string } = req.body;
-
-    // Validate input
-    if (!to || !message) {
-        res.status(400).json({ error: 'Both "to" and "message" are required' });
-        return;
-    }
-
-    try {
-        // Ensure `getWhatsAppSocket` returns a valid WhatsApp socket instance
-        const sock = getWhatsAppSocket();
-        if (!sock) {
-            throw new Error('WhatsApp socket is not initialized');
-        }
-
-        // Validate and format the recipient JID
-        const recipientJID = to.includes('@') ? to : `${to}@s.whatsapp.net`;
-
-        // Send a WhatsApp message
-        const result: proto.WebMessageInfo | undefined = await sock.sendMessage(
-            recipientJID,
-            { text: message } // Message content
-        );
-
-        // If result is undefined, handle the error
-        if (!result) {
-            throw new Error('Message sending failed');
-        }
-
-        // Respond with the success status
-        res.status(200).json({
-            success: true,
-            message: `Message sent to ${to}`,
-            result,
-        });
-    } catch (error) {
-        console.error('Failed to send message:', error);
-        res.status(500).json({
-            error: error instanceof Error ? error.message : 'Failed to send message',
-        });
-    }
+    const { to, message, sessionId }: { to: string; message: string, sessionId: string } = req.body;
+    await whatsappService.sendMessage(sessionId, to, message);
+    res.json({ success: true });
 });
 
 let delay = new Promise((res) => {

@@ -1,15 +1,19 @@
-import {Express, Request,Response, Router } from "express";
-import { getLatestQR } from "../services";
+import { Request, Response, Router } from "express";
+import { WhatsAppService } from "../services/WhatsappService";
+
+const whatsappService = WhatsAppService.getInstance();
 
 const router = Router();
 
-router.get('/api', (req: Request, res: Response) => {
-    const qrCode = getLatestQR();
-    if (qrCode) {
-        res.json({ qrCode });
-    } else {
-        res.status(404).json({ error: 'QR code not available yet' });
-    }
+router.post('/get_qr_code', async (req: Request, res: Response) => {
+    const { sessionId, qrCode } = await whatsappService.generateSession();
+    res.json({ sessionId, qrCode });
 });
+
+router.get('/get_session_status/:sessionId', async (req: Request, res: Response) => {
+    const status = await whatsappService.getSessionStatus(req.params.sessionId);
+    res.json(status);
+});
+
 
 export default router
