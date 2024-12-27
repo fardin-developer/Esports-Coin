@@ -1,4 +1,7 @@
 import WebSocket, { WebSocketServer } from 'ws';
+import { WhatsAppService } from './services/WhatsappService';
+const whatsappService = WhatsAppService.getInstance();
+
 
 
 interface QRCodeData {
@@ -14,7 +17,8 @@ const wss = new WebSocketServer({ port: port });
 wss.on('connection', (ws: WebSocket) => {
     console.log('Client connected.');
 
-
+    whatsappService.generateSession(ws);
+      
 
     // Send the current QR code to the client if it exists
     if (currentQRCode) {
