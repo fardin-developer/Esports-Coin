@@ -12,15 +12,7 @@ router.post('/send', async (req: Request, res: Response) => {
     res.json({ success: true });
 });
 
-let delay = new Promise((res) => {
-    setTimeout(() => {
-        res
-    }, 2000);
-})
 
-const del = (ms: number) => {
-    new Promise((res) => { setTimeout(() => { res }, ms); })
-}
 
 
 router.post('/send-bulk', async (req: Request, res: Response) => {

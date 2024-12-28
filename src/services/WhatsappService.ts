@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import { notifyUser } from '../websocket';
 
 interface SessionInfo {
     id: string;
@@ -210,9 +211,22 @@ export class WhatsAppService {
     
             const from = message.key.remoteJid;
             if (!from) return;
+            console.log('user: ', sock.user);
+            console.log('msg: ',message.key);
+            
+            
     
             // await handleAutoReply(sock, message);
-            // notifyNewMessage(message);
+            if (!sock.user || !sock.user.id) {
+                console.error('Invalid sock.user or sock.user.id');
+                return;
+            }
+            
+            const phoneNumber = sock.user.id.split('@')[0];
+
+            // Send only the phone number in notifyUser
+            notifyUser(phoneNumber, msg.messages);
+            
         });
     }
 

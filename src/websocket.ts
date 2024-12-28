@@ -1,57 +1,60 @@
-import WebSocket, { WebSocketServer } from 'ws';
-import { WhatsAppService } from './services/WhatsappService';
-const whatsappService = WhatsAppService.getInstance();
+import WebSocket from 'ws';
+import { Server } from 'http';
+import { parse } from 'url';
 
+const userSockets: Map<string, WebSocket> = new Map();
 
+export function setupWebSocket(server: Server) {
+    const wss = new WebSocket.Server({ server });
 
-interface QRCodeData {
-    qrCode: string;
-}
+    wss.on('connection', (ws, req) => {
+        console.log('WebSocket connection established.');
 
-let currentQRCode: QRCodeData | null = null;
+        // Parse user ID from the query string (e.g., ?userId=12345)
+        const parsedUrl = parse(req.url || '', true);
+        const userId = parsedUrl.query.userId as string;
 
-// Create a WebSocket server
-const port = 8090;
-const wss = new WebSocketServer({ port: port });
+        if (userId) {
+            console.log(`User connected: ${userId}`);
+            
+            // Save userId and WebSocket connection in the map
+            userSockets.set(userId, ws);
 
-wss.on('connection', (ws: WebSocket) => {
-    console.log('Client connected.');
+            // Handle WebSocket events
+            ws.on('close', (code, reason) => {
+                console.log(`Connection closed for user ${userId}: Code=${code}, Reason=${reason}`);
+                userSockets.delete(userId); // Remove from the map
+            });
 
-    whatsappService.generateSession(ws);
-      
-
-    // Send the current QR code to the client if it exists
-    if (currentQRCode) {
-        ws.send(JSON.stringify({ type: 'qrCode', data: currentQRCode.qrCode }));
-    }
-
-    ws.on('message', (message) => {
-        console.log(`Received: ${message}`);
-    });
-
-    ws.on('close', () => {
-        console.log('Client disconnected.');
-    });
-});
-
-// Function to simulate QR code changes
-function updateQRCode(newQRCode: string) {
-    currentQRCode = { qrCode: newQRCode };
-
-    // Broadcast the new QR code to all connected clients
-    wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ type: 'qrCode', data: newQRCode }));
+            ws.on('error', (error) => {
+                console.error(`WebSocket error for user ${userId}:`, error);
+                userSockets.delete(userId); // Remove from the map on error
+            });
+        } else {
+            console.warn('No userId provided in the connection URL.');
+            ws.close(1008, 'User ID required'); // Close the connection with an error code
         }
     });
 
-    console.log('QR code updated:', newQRCode);
+    // Graceful shutdown
+    process.on('SIGINT', () => {
+        console.log('Shutting down WebSocket server...');
+        wss.clients.forEach(client => client.close());
+        wss.close(() => {
+            console.log('WebSocket server closed.');
+            process.exit(0);
+        });
+    });
 }
 
-// Simulate QR code updates every 10 seconds (replace with your actual logic)
-setInterval(() => {
-    const randomQRCode = `QR-${Math.floor(Math.random() * 10000)}`;
-    updateQRCode(randomQRCode);
-}, 10000);
 
-console.log(`WebSocket server is running on ws://localhost:${port}`);
+// Function to notify user of new messages
+export function notifyUser(userId: string, messages: Record<string, any>) {
+    const ws = userSockets.get(userId);
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.log(`No active WebSocket for user ${userId}`);
+        return;
+    }
+    console.log(`Notifying user ${userId}`);
+    ws.send(JSON.stringify({ type: 'NEW_MESSAGE', data: messages }));
+}
