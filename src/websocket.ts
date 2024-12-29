@@ -1,23 +1,50 @@
 import WebSocket from 'ws';
 import { Server } from 'http';
 import { parse } from 'url';
+import { WhatsAppService } from './services/WhatsappService';
+import { ClientManager } from './ClientManager';
+import { v4 as uuidv4 } from 'uuid';
 
 const userSockets: Map<string, WebSocket> = new Map();
+
+
 
 export function setupWebSocket(server: Server) {
     const wss = new WebSocket.Server({ server });
 
-    wss.on('connection', (ws, req) => {
+
+    
+
+
+    wss.on('connection', async (ws, req) => {
+        const whatsappService = WhatsAppService.getInstance();
+        const clientManager = ClientManager.getInstance();
+        const sessionId = uuidv4();
         console.log('WebSocket connection established.');
 
-        // Parse user ID from the query string (e.g., ?userId=12345)
+        // Parse the query string from the URL
         const parsedUrl = parse(req.url || '', true);
         const userId = parsedUrl.query.userId as string;
+        const getQr = parsedUrl.query.getQr;
 
+        // Check if `getQr` is requested
+        if (getQr) {
+            try {
+                console.log('Generating QR session...');
+                clientManager.addClient(sessionId, ws);
+                clientManager.sendQr(sessionId);
+            } catch (error) {
+                console.error('Error generating QR session:', error);
+                ws.close(1011, 'Failed to generate QR session'); // Internal server error
+                return;
+            }
+        }
+
+        // Check if `userId` is provided
         if (userId) {
             console.log(`User connected: ${userId}`);
-            
-            // Save userId and WebSocket connection in the map
+
+            // Save the userId and WebSocket connection in the map
             userSockets.set(userId, ws);
 
             // Handle WebSocket events
@@ -30,9 +57,12 @@ export function setupWebSocket(server: Server) {
                 console.error(`WebSocket error for user ${userId}:`, error);
                 userSockets.delete(userId); // Remove from the map on error
             });
-        } else {
-            console.warn('No userId provided in the connection URL.');
-            ws.close(1008, 'User ID required'); // Close the connection with an error code
+        }
+
+        // If neither `getQr` nor `userId` is valid, close the connection
+        if (!getQr && !userId) {
+            console.warn('Neither getQr nor userId provided in the connection URL.');
+            ws.close(1008, 'Invalid connection parameters'); // Policy Violation
         }
     });
 
@@ -46,6 +76,7 @@ export function setupWebSocket(server: Server) {
         });
     });
 }
+
 
 
 // Function to notify user of new messages

@@ -6,6 +6,7 @@ import fs from 'fs/promises';
 import { existsSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { notifyUser } from '../websocket';
+import { WebSocket } from 'ws';
 
 interface SessionInfo {
     id: string;
@@ -71,10 +72,10 @@ export class WhatsAppService {
         }
     }
 
-    async generateSession(): Promise<{ sessionId: string, qrCode: string }> {
+    async generateSession(ws: WebSocket | null = null): Promise<{ sessionId: string, qrCode: string }> {
         const sessionId = uuidv4();
         const tempAuthState = await useMultiFileAuthState(path.join(this.AUTH_BASE_DIR, sessionId));
-        
+
         const session: SessionInfo = {
             id: sessionId,
             status: 'pending',
@@ -85,7 +86,7 @@ export class WhatsAppService {
         };
 
         this.sessions.set(sessionId, session);
-        
+
         return new Promise(async (resolve, reject) => {
             try {
                 const sock = makeWASocket({
@@ -102,23 +103,14 @@ export class WhatsAppService {
 
                     if (qr) {
                         session.qrCode = await QRCode.toDataURL(qr);
-                        if (previousQR && previousQR !== session.qrCode) {
-                            await this.handleExpiredSession(sessionId);
-                            sock.ev.removeAllListeners('connection.update');
-                            reject(new Error('QR Code expired'));
-                            return;
-                        } else if (!previousQR) {
-                            resolve({ sessionId, qrCode: session.qrCode });
-                        }
-                        previousQR = session.qrCode;
+                        resolve({ sessionId, qrCode: session.qrCode });
                     }
 
-                    if (connection === 'close') {
-                        console.log("Connection closed", update);
-                        await this.handleDisconnect(sessionId, update);
-                    } else if (connection === 'open') {
+                    if (connection === 'open') {
                         session.status = 'connected';
                         this.setupEventListeners(sessionId, sock, tempAuthState.saveCreds);
+                    } else if (connection === 'close') {
+                        await this.handleDisconnect(sessionId, update);
                     }
                 };
 
@@ -149,7 +141,7 @@ export class WhatsAppService {
         const shouldReconnect = error !== DisconnectReason.loggedOut;
 
         console.log('Reconnecting', shouldReconnect);
-        
+
         if (!shouldReconnect) {
             await this.cleanupSession(sessionId);
         } else {
@@ -165,7 +157,7 @@ export class WhatsAppService {
     private async cleanupSession(sessionId: string): Promise<void> {
         this.sessions.delete(sessionId);
         const authPath = path.join(this.AUTH_BASE_DIR, sessionId);
-        
+
         try {
             if (existsSync(authPath)) {
                 await fs.rm(authPath, { recursive: true, force: true });
@@ -176,19 +168,19 @@ export class WhatsAppService {
     }
 
     private setupEventListeners(
-        sessionId: string, 
-        sock: ReturnType<typeof makeWASocket>, 
+        sessionId: string,
+        sock: ReturnType<typeof makeWASocket>,
         saveCreds: () => Promise<void>
     ): void {
         sock.ev.on('creds.update', saveCreds);
-    
+
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect } = update;
-            
+
             if (connection === 'close') {
                 const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
                 const shouldReconnect = statusCode !== DisconnectReason.loggedOut
-    
+
                 if (shouldReconnect) {
                     console.log(`Reconnecting session ${sessionId}...`);
                     await this.connectExistingSession(sessionId);
@@ -204,29 +196,31 @@ export class WhatsAppService {
                 }
             }
         });
-    
+
         sock.ev.on('messages.upsert', async (msg) => {
             const message = msg.messages[0];
             if (!message.message || message.key.fromMe) return;
-    
+
             const from = message.key.remoteJid;
             if (!from) return;
             console.log('user: ', sock.user);
-            console.log('msg: ',message.key);
-            
-            
-    
+            console.log('msg: ', message.key);
+
+
+
             // await handleAutoReply(sock, message);
             if (!sock.user || !sock.user.id) {
                 console.error('Invalid sock.user or sock.user.id');
                 return;
             }
-            
+            console.log(sessionId, "   ,,,..........")
+
             const phoneNumber = sock.user.id.split('@')[0];
 
             // Send only the phone number in notifyUser
-            notifyUser(phoneNumber, msg.messages);
-            
+
+            notifyUser(sessionId, msg.messages);
+
         });
     }
 
@@ -237,13 +231,13 @@ export class WhatsAppService {
                 throw new Error('Session not found');
             }
             const formattedNumber = phoneNumber.replace(/[^0-9]/g, '')
-            const fullNumber = formattedNumber.startsWith('91') ? 
+            const fullNumber = formattedNumber.startsWith('91') ?
                 formattedNumber : `91${formattedNumber}`
             const jid = `${fullNumber}@s.whatsapp.net`
             session.socket.sendMessage(
-                jid, 
-                { 
-                    text: message 
+                jid,
+                {
+                    text: message
                 }
             );
         } catch (error) {
@@ -256,7 +250,7 @@ export class WhatsAppService {
         error?: string;
     }> {
         let session = this.sessions.get(sessionId);
-        
+
         if (!session) {
             if (existsSync(path.join(this.AUTH_BASE_DIR, sessionId))) {
                 try {
