@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import User from "../model/User";
 // import CustomError from "../errors";
-// import { attachCookiesToResponse, tokenParams } from "../utils";
+import { createJWT } from "../utils/jwt";
 import { isTokenValid } from '../utils/jwt';
 import bcrypt from 'bcryptjs';
 
@@ -21,10 +21,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await User.create({ name, email, password, });
-    // const tokenUserDetails = tokenParams(user);
-    // attachCookiesToResponse({ res, user: tokenUserDetails });
-    res.status(StatusCodes.CREATED).json({ user });
+    const user = await User.create({ name, email, password });
+    const { name: userName, email: userEmail} = user;
+    const token = createJWT({ name: userName, email: userEmail,_id: user.id });
+    res.status(StatusCodes.CREATED).json({ user: { name: userName, email: userEmail }, token });
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: (error as Error).message });
   }
@@ -59,10 +59,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });
       return;
     }
-
-    // const tokenUser = tokenParams(user);
-    // const data = attachCookiesToResponse({ res, user: tokenUser });
-    res.status(StatusCodes.OK).json({ user});
+    const { name: userName, email: userEmail,_id:_id } = user;
+    const token = createJWT({ name: userName, email: userEmail,_id: user.id });
+    res.status(StatusCodes.CREATED).json({ user: { name: userName, email: userEmail }, token });;
   } catch (error) {
     console.error(error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "An error occurred. Please try again later." });
