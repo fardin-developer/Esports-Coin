@@ -2,7 +2,7 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeys
 import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
 import path from 'path';
-import fs from 'fs/promises';
+import fs from 'fs';
 import { existsSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { notifyUser } from '../websocket';
@@ -34,15 +34,15 @@ export class WhatsAppService {
     }
 
     private async initializeService(): Promise<void> {
-        await fs.mkdir(this.AUTH_BASE_DIR, { recursive: true });
+        await fs.promises.mkdir(this.AUTH_BASE_DIR, { recursive: true });
         await this.restoreSessions();
     }
 
     private async restoreSessions(): Promise<void> {
         try {
-            const dirs = await fs.readdir(this.AUTH_BASE_DIR);
+            const dirs = await fs.promises.readdir(this.AUTH_BASE_DIR);
             for (const sessionId of dirs) {
-                if ((await fs.stat(path.join(this.AUTH_BASE_DIR, sessionId))).isDirectory()) {
+                if ((await fs.promises.stat(path.join(this.AUTH_BASE_DIR, sessionId))).isDirectory()) {
                     await this.connectExistingSession(sessionId);
                 }
             }
@@ -74,6 +74,7 @@ export class WhatsAppService {
 
     async generateSession(ws: WebSocket | null = null): Promise<{ sessionId: string, qrCode: string }> {
         const sessionId = uuidv4();
+        const sessionPath = path.join(this.AUTH_BASE_DIR, sessionId);
         const tempAuthState = await useMultiFileAuthState(path.join(this.AUTH_BASE_DIR, sessionId));
 
         const session: SessionInfo = {
@@ -115,6 +116,8 @@ export class WhatsAppService {
                 };
 
                 sock.ev.on('connection.update', connectionHandler);
+                // setTimeout(() => this.cleanupIfUnused(sessionId, sessionPath), 30000);
+
 
             } catch (error) {
                 await this.cleanupSession(sessionId);
@@ -154,16 +157,28 @@ export class WhatsAppService {
         }
     }
 
-    private async cleanupSession(sessionId: string): Promise<void> {
+    private async cleanupSession(sessionId: string) {
+        const sessionPath = path.join(this.AUTH_BASE_DIR, sessionId);
+    
+        // Remove session from memory
         this.sessions.delete(sessionId);
-        const authPath = path.join(this.AUTH_BASE_DIR, sessionId);
-
+    
         try {
-            if (existsSync(authPath)) {
-                await fs.rm(authPath, { recursive: true, force: true });
+            if (fs.existsSync(sessionPath)) {
+                fs.rmSync(sessionPath, { recursive: true });
+                console.log(`Deleted session folder: ${sessionPath}`);
             }
         } catch (error) {
-            console.error('Error cleaning up session:', error);
+            console.error(`Failed to delete session ${sessionId}:`, error);
+        }
+    }
+    
+
+    private async cleanupIfUnused(sessionId: string, sessionPath: string) {
+        const session = this.sessions.get(sessionId);
+        if (session && session.status === 'pending') {
+            console.log(`Cleaning up unused session: ${sessionId}`);
+            await this.cleanupSession(sessionId);
         }
     }
 

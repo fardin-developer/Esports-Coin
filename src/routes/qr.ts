@@ -11,18 +11,18 @@ router.post('/get_qr_code', async (req: Request, res: Response) => {
 });
 
 
-// router.post('/get_qr_code', async (req: Request, res: Response) => {
-//     const { sessionId, qrCode } = await whatsappService.generateSession();
-//     // Generate the HTML string with the QR code inside an <img> tag
-//     const qrCodeHTML = `<html>
-//         <body>
-//             <p>Session ID: ${sessionId}</p>
-//             <img src="${qrCode}" alt="QR Code" />
-//         </body>
-//     </html>`;
-//     res.setHeader('Content-Type', 'text/html'); // Set the content type as HTML
-//     res.send(qrCodeHTML);
-// });
+router.post('/get_qr_code/viewmode', async (req: Request, res: Response) => {
+    const { sessionId, qrCode } = await whatsappService.generateSession();
+    // Generate the HTML string with the QR code inside an <img> tag
+    const qrCodeHTML = `<html>
+        <body>
+            <p>Session ID: ${sessionId}</p>
+            <img src="${qrCode}" alt="QR Code" />
+        </body>
+    </html>`;
+    res.setHeader('Content-Type', 'text/html'); // Set the content type as HTML
+    res.send(qrCodeHTML);
+});
 
 
 router.get('/get_session_status/:sessionId', async (req: Request, res: Response) => {
@@ -32,3 +32,4 @@ router.get('/get_session_status/:sessionId', async (req: Request, res: Response)
 
 
 export default router
+
