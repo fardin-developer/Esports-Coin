@@ -5,10 +5,11 @@ import path from 'path';
 import fs from 'fs';
 import { existsSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { notifyUser } from '../websocket';
+// import { notifyUser } from '../websocket';
 import { WebSocket } from 'ws';
+import axios from 'axios';
+import ApiKey from '../model/ApiKey';
 import WebhookService from './WebhookServices';
-
 
 interface SessionInfo {
     id: string;
@@ -54,13 +55,25 @@ export class WhatsAppService {
         }
     }
 
-    private getWebhookUrlForSession(sessionId: string): string {
-        // Implement this method to fetch webhook URL from your configuration or database
-        // This is a placeholder implementation
-        return process.env.WEBHOOK_URL || 'https://your-default-webhook-url.com';
+    private async getWebhookUrlForSession(sessionId: string): Promise<string> {
+        try {
+            const metaData = await ApiKey.findOne({ sessionId });
+    
+            if (metaData && metaData.webhookUrl) {
+                return metaData.webhookUrl; // Return the stored webhook URL
+            }
+    
+            console.warn(`No webhook URL found for session ID: ${sessionId}`);
+            return process.env.WEBHOOK_URL || 'https://your-default-webhook-url.com'; // Default fallback
+        } catch (error) {
+            console.error(`Error retrieving webhook URL for session ID ${sessionId}:`, error);
+            return process.env.WEBHOOK_URL || 'https://your-default-webhook-url.com'; // Default fallback on error
+        }
     }
+    
 
     private async connectExistingSession(sessionId: string): Promise<void> {
+        const webhookUrl = await this.getWebhookUrlForSession(sessionId);
         const session: SessionInfo = {
             id: sessionId,
             status: 'pending',
@@ -68,7 +81,7 @@ export class WhatsAppService {
             lastActivity: Date.now(),
             socket: null,
             qrCode: null,
-            webhookService: new WebhookService(this.getWebhookUrlForSession(sessionId))
+            webhookService: new WebhookService(webhookUrl)
         };
 
         try {
@@ -82,11 +95,13 @@ export class WhatsAppService {
         }
     }
 
-    async generateSession(ws: WebSocket | null = null): Promise<{ sessionId: string, qrCode: string }> {
+    async generateSession(ws: WebSocket | null = null, userId: string): Promise<{ sessionId: string, qrCode: string, userId: string }> {
         const sessionId = uuidv4();
         const sessionPath = path.join(this.AUTH_BASE_DIR, sessionId);
         const tempAuthState = await useMultiFileAuthState(sessionPath);
-
+        const webhookUrl = await this.getWebhookUrlForSession(sessionId);
+        console.log("User ID:", userId);
+    
         const session: SessionInfo = {
             id: sessionId,
             status: 'pending',
@@ -94,44 +109,66 @@ export class WhatsAppService {
             lastActivity: Date.now(),
             socket: null,
             qrCode: null,
-            webhookService: new WebhookService(this.getWebhookUrlForSession(sessionId))
+            webhookService: new WebhookService(webhookUrl)
         };
-
+    
         this.sessions.set(sessionId, session);
-
-        return new Promise(async (resolve, reject) => {
-            try {
-                const sock = makeWASocket({
-                    auth: tempAuthState.state,
-                    printQRInTerminal: true
-                });
-
-                session.socket = sock;
-
-                sock.ev.on('creds.update', tempAuthState.saveCreds);
-                const connectionHandler = async (update: any) => {
-                    const { connection, qr } = update;
-
-                    if (qr) {
-                        session.qrCode = await QRCode.toDataURL(qr);
-                        resolve({ sessionId, qrCode: session.qrCode });
-                    }
-
-                    if (connection === 'open') {
-                        session.status = 'connected';
-                        this.setupEventListeners(sessionId, sock, tempAuthState.saveCreds);
-                    } else if (connection === 'close') {
-                        await this.handleDisconnect(sessionId, update);
-                    }
-                };
-
-                sock.ev.on('connection.update', connectionHandler);
-            } catch (error) {
-                await this.cleanupSession(sessionId);
-                reject(error);
+    
+        try {
+            // Update the sessionid for the user in the database
+            const updatedApiKey = await ApiKey.findOneAndUpdate(
+                { user: userId },  // Find by user ID
+                { 
+                    sessionId: sessionId 
+                },  
+                { new: true, upsert: false } // Return the updated document
+            );
+    
+            if (!updatedApiKey) {
+                console.warn(`No user found for user: ${userId}`);
+            } else {
+                console.log(`Seesion Id updated for user: ${userId}`);
             }
-        });
+    
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const sock = makeWASocket({
+                        auth: tempAuthState.state,
+                        printQRInTerminal: true
+                    });
+    
+                    session.socket = sock;
+    
+                    sock.ev.on('creds.update', tempAuthState.saveCreds);
+                    const connectionHandler = async (update: any) => {
+                        const { connection, qr } = update;
+    
+                        if (qr) {
+                            session.qrCode = await QRCode.toDataURL(qr);
+                            resolve({ sessionId, qrCode: session.qrCode, userId });
+                        }
+    
+                        if (connection === 'open') {
+                            session.status = 'connected';
+                            this.setupEventListeners(sessionId, sock, tempAuthState.saveCreds);
+                        } else if (connection === 'close') {
+                            await this.handleDisconnect(sessionId, update);
+                        }
+                    };
+    
+                    sock.ev.on('connection.update', connectionHandler);
+                } catch (error) {
+                    await this.cleanupSession(sessionId);
+                    reject(error);
+                }
+            });
+    
+        } catch (error) {
+            console.error("Error updating webhookUrl:", error);
+            throw error;
+        }
     }
+    
 
     private async handleDisconnect(sessionId: string, update: any): Promise<void> {
         const error = (update.lastDisconnect?.error as Boom)?.output?.statusCode;
@@ -212,14 +249,17 @@ export class WhatsAppService {
                 timestamp: message.messageTimestamp,
                 text: message.message.conversation || message.message.extendedTextMessage?.text || '',
                 type: Object.keys(message.message)[0]
-            };
+            };           
+            console.log(messageData);
+             
+            
 
             const session = this.sessions.get(sessionId);
             if (session?.webhookService) {
                 await session.webhookService.send(sessionId, phoneNumber, messageData);
             }
 
-            notifyUser(sessionId, msg.messages);
+            // notifyUser(sessionId, msg.messages);
         });
     }
 

@@ -44,10 +44,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const user = await User.findOne({ email });
-    if (user && !user.verified) {
-      res.status(StatusCodes.UNAUTHORIZED).json({ error: "User not verified by admin", status: "not verified" });
-      return;
-    }
+    // if (user && !user.verified) {
+    //   res.status(StatusCodes.UNAUTHORIZED).json({ error: "User not verified by admin", status: "not verified" });
+    //   return;
+    // }
 
     if (!user) {
       res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });

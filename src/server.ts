@@ -7,7 +7,7 @@ import swaggerFile from './doc/swagger-output.json';
 // import { notificationEmitter } from './services/notification';
 import connectDB from './db/connectDB';
 import http from 'http';
-import { setupWebSocket } from './websocket';
+// import { setupWebSocket } from './websocket';
 
 //IMPORT ROUTES
 import message from './routes/messages';
@@ -34,7 +34,7 @@ app.use('/api/v1/subscribe', notificationRoute);
 
 // Create HTTP server and integrate WebSocket
 const server = http.createServer(app);
-setupWebSocket(server);
+// setupWebSocket(server);
 
 
 
