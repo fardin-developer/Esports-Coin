@@ -7,6 +7,8 @@ import { existsSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { notifyUser } from '../websocket';
 import { WebSocket } from 'ws';
+import WebhookService from './WebhookServices';
+
 
 interface SessionInfo {
     id: string;
@@ -15,6 +17,7 @@ interface SessionInfo {
     lastActivity: number;
     socket: ReturnType<typeof makeWASocket> | null;
     qrCode: string | null;
+    webhookService?: WebhookService;
 }
 
 export class WhatsAppService {
@@ -51,6 +54,12 @@ export class WhatsAppService {
         }
     }
 
+    private getWebhookUrlForSession(sessionId: string): string {
+        // Implement this method to fetch webhook URL from your configuration or database
+        // This is a placeholder implementation
+        return process.env.WEBHOOK_URL || 'https://your-default-webhook-url.com';
+    }
+
     private async connectExistingSession(sessionId: string): Promise<void> {
         const session: SessionInfo = {
             id: sessionId,
@@ -58,7 +67,8 @@ export class WhatsAppService {
             createdAt: Date.now(),
             lastActivity: Date.now(),
             socket: null,
-            qrCode: null
+            qrCode: null,
+            webhookService: new WebhookService(this.getWebhookUrlForSession(sessionId))
         };
 
         try {
@@ -75,7 +85,7 @@ export class WhatsAppService {
     async generateSession(ws: WebSocket | null = null): Promise<{ sessionId: string, qrCode: string }> {
         const sessionId = uuidv4();
         const sessionPath = path.join(this.AUTH_BASE_DIR, sessionId);
-        const tempAuthState = await useMultiFileAuthState(path.join(this.AUTH_BASE_DIR, sessionId));
+        const tempAuthState = await useMultiFileAuthState(sessionPath);
 
         const session: SessionInfo = {
             id: sessionId,
@@ -83,7 +93,8 @@ export class WhatsAppService {
             createdAt: Date.now(),
             lastActivity: Date.now(),
             socket: null,
-            qrCode: null
+            qrCode: null,
+            webhookService: new WebhookService(this.getWebhookUrlForSession(sessionId))
         };
 
         this.sessions.set(sessionId, session);
@@ -96,7 +107,6 @@ export class WhatsAppService {
                 });
 
                 session.socket = sock;
-                let previousQR: string | null = null;
 
                 sock.ev.on('creds.update', tempAuthState.saveCreds);
                 const connectionHandler = async (update: any) => {
@@ -116,9 +126,6 @@ export class WhatsAppService {
                 };
 
                 sock.ev.on('connection.update', connectionHandler);
-                // setTimeout(() => this.cleanupIfUnused(sessionId, sessionPath), 30000);
-
-
             } catch (error) {
                 await this.cleanupSession(sessionId);
                 reject(error);
@@ -126,30 +133,15 @@ export class WhatsAppService {
         });
     }
 
-    private async handleExpiredSession(sessionId: string): Promise<void> {
-        const session = this.sessions.get(sessionId);
-        if (session?.socket) {
-            session.socket.end(new Error('Session expired'));
-            session.socket.ev.removeAllListeners('connection.update');
-            session.socket.ev.removeAllListeners('creds.update');
-            session.socket.ev.removeAllListeners('messages.upsert');
-        }
-        await this.cleanupSession(sessionId);
-    }
-
     private async handleDisconnect(sessionId: string, update: any): Promise<void> {
         const error = (update.lastDisconnect?.error as Boom)?.output?.statusCode;
-
         console.log('Disconnected from WhatsApp', error);
         const shouldReconnect = error !== DisconnectReason.loggedOut;
-
-        console.log('Reconnecting', shouldReconnect);
 
         if (!shouldReconnect) {
             await this.cleanupSession(sessionId);
         } else {
             const session = this.sessions.get(sessionId);
-            console.log('Session', session);
             if (session) {
                 session.status = 'pending';
                 await this.connectExistingSession(sessionId);
@@ -157,12 +149,10 @@ export class WhatsAppService {
         }
     }
 
-    private async cleanupSession(sessionId: string) {
+    private async cleanupSession(sessionId: string): Promise<void> {
         const sessionPath = path.join(this.AUTH_BASE_DIR, sessionId);
-    
-        // Remove session from memory
         this.sessions.delete(sessionId);
-    
+
         try {
             if (fs.existsSync(sessionPath)) {
                 fs.rmSync(sessionPath, { recursive: true });
@@ -170,15 +160,6 @@ export class WhatsAppService {
             }
         } catch (error) {
             console.error(`Failed to delete session ${sessionId}:`, error);
-        }
-    }
-    
-
-    private async cleanupIfUnused(sessionId: string, sessionPath: string) {
-        const session = this.sessions.get(sessionId);
-        if (session && session.status === 'pending') {
-            console.log(`Cleaning up unused session: ${sessionId}`);
-            await this.cleanupSession(sessionId);
         }
     }
 
@@ -194,7 +175,7 @@ export class WhatsAppService {
 
             if (connection === 'close') {
                 const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
                 if (shouldReconnect) {
                     console.log(`Reconnecting session ${sessionId}...`);
@@ -218,24 +199,27 @@ export class WhatsAppService {
 
             const from = message.key.remoteJid;
             if (!from) return;
-            console.log('user: ', sock.user);
-            console.log('msg: ', message.key);
 
-
-
-            // await handleAutoReply(sock, message);
             if (!sock.user || !sock.user.id) {
                 console.error('Invalid sock.user or sock.user.id');
                 return;
             }
-            console.log(sessionId, "   ,,,..........")
 
             const phoneNumber = sock.user.id.split('@')[0];
+            const messageData = {
+                id: message.key.id,
+                from,
+                timestamp: message.messageTimestamp,
+                text: message.message.conversation || message.message.extendedTextMessage?.text || '',
+                type: Object.keys(message.message)[0]
+            };
 
-            // Send only the phone number in notifyUser
+            const session = this.sessions.get(sessionId);
+            if (session?.webhookService) {
+                await session.webhookService.send(sessionId, phoneNumber, messageData);
+            }
 
             notifyUser(sessionId, msg.messages);
-
         });
     }
 
@@ -245,18 +229,16 @@ export class WhatsAppService {
             if (!session?.socket) {
                 throw new Error('Session not found');
             }
-            const formattedNumber = phoneNumber.replace(/[^0-9]/g, '')
-            const fullNumber = formattedNumber.startsWith('91') ?
-                formattedNumber : `91${formattedNumber}`
-            const jid = `${fullNumber}@s.whatsapp.net`
-            session.socket.sendMessage(
-                jid,
-                {
-                    text: message
-                }
-            );
+
+            const formattedNumber = phoneNumber.replace(/[^0-9]/g, '');
+            const fullNumber = formattedNumber.startsWith('91') ? 
+                formattedNumber : `91${formattedNumber}`;
+            const jid = `${fullNumber}@s.whatsapp.net`;
+
+            await session.socket.sendMessage(jid, { text: message });
         } catch (error) {
             console.error('Error sending message:', error);
+            throw error;
         }
     }
 
