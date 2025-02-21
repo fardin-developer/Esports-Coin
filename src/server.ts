@@ -8,6 +8,7 @@ import swaggerFile from './doc/swagger-output.json';
 import connectDB from './db/connectDB';
 import http from 'http';
 // import { setupWebSocket } from './websocket';
+import cors from 'cors'
 
 //IMPORT ROUTES
 import message from './routes/messages';
@@ -19,6 +20,14 @@ dotenv.config();
 const app: Express = express();
 
 app.use(express.json());
+
+app.use(cors({
+  origin: 'http://localhost:3002', // Allow frontend origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow necessary methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allow required headers
+  credentials: true // If you use cookies/auth tokens
+}));
+
 
 app.get('/test', (req: Request, res: Response) => {
     res.send('Express + TypeScript Server');

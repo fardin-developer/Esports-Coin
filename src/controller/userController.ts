@@ -1,34 +1,55 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import User from "../model/User";
-// import CustomError from "../errors";
+import User, { IUser } from "../model/User"; // Ensure IUser is defined in your model
 import { createJWT } from "../utils/jwt";
-import { isTokenValid } from '../utils/jwt';
-import bcrypt from 'bcryptjs';
+import ApiKey from "../model/ApiKey";
+import crypto from "crypto";
 
-/**
- * Registers a new user with the provided email, name, and password. Automatically assigns
- * the role of 'admin' to the first registered user and 'user' to others. Responds with the
- * newly created user object.
- */
+
+const generateApiKey = (): string => {
+  return crypto.randomBytes(32).toString("hex");
+};
+
+
+const saveAPIkey = async (user: IUser): Promise<void> => {
+  try {
+     await ApiKey.create({
+      key: generateApiKey(),
+      user: user._id,
+    });
+      
+  } catch (error) {
+    console.error("Error saving API key:", error);
+  }
+};
+
+
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, name, password } = req.body;
 
-    const emailAlreadyExists = await User.findOne({ email });
-    if (emailAlreadyExists) {
+    if (await User.findOne({ email })) {
       res.status(StatusCodes.BAD_REQUEST).json({ message: "Email already exists" });
       return;
     }
 
+    // Create new user
     const user = await User.create({ name, email, password });
-    const { name: userName, email: userEmail} = user;
-    const token = createJWT({ name: userName, email: userEmail,_id: user.id });
+
+    // Extract user data for token
+    const { name: userName, email: userEmail } = user;
+    const token = createJWT({ name: userName, email: userEmail, _id: user.id });
+
+    // Generate and save API key
+     await saveAPIkey(user);
+
+    // Respond with user data and token
     res.status(StatusCodes.CREATED).json({ user: { name: userName, email: userEmail }, token });
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: (error as Error).message });
   }
 };
+
 
 /**
  * Logs in a user by validating the provided email and password. If successful, responds
@@ -42,6 +63,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       res.status(StatusCodes.BAD_REQUEST).json({ error: "Please provide email and password" });
       return;
     }
+
+    console.log(email, password);
+    
 
     const user = await User.findOne({ email });
     // if (user && !user.verified) {

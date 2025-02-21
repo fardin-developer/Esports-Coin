@@ -116,7 +116,7 @@ export class WhatsAppService {
 
         try {
             // Update the sessionid for the user in the database
-            const updatedApiKey = await ApiKey.findOneAndUpdate(
+            const updatedSessionId = await ApiKey.findOneAndUpdate(
                 { user: userId },  // Find by user ID
                 {
                     sessionId: sessionId
@@ -124,7 +124,7 @@ export class WhatsAppService {
                 { new: true, upsert: false } // Return the updated document
             );
 
-            if (!updatedApiKey) {
+            if (!updatedSessionId) {
                 console.warn(`No user found for user: ${userId}`);
             } else {
                 console.log(`Seesion Id updated for user: ${userId}`);
@@ -279,14 +279,14 @@ export class WhatsAppService {
             await session.socket.sendPresenceUpdate('composing', jid);
 
             // Simulate typing delay
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 5-second delay
+            await new Promise(resolve => setTimeout(resolve, 5000)); // 5-second delay
 
             // Send the message
             await session.socket.sendMessage(jid, { text: message });
 
             // Clear "typing..." status
             await session.socket.sendPresenceUpdate('paused', jid);
-            
+
         } catch (error) {
             console.error('Error sending message:', error);
             throw error;
