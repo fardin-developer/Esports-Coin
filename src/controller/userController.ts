@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import User, { IUser } from "../model/User"; // Ensure IUser is defined in your model
 import { createJWT } from "../utils/jwt";
-import ApiKey from "../model/ApiKey";
+import ApiKey from "../model/Instance";
 import crypto from "crypto";
 
 

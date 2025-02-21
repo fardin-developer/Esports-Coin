@@ -1,4 +1,4 @@
-import ApiKey from "../model/ApiKey";
+import ApiKey from "../model/Instance";
 import { Request, Response } from "express";
 
 export const getWebhookUrlByApiKey = async (req: Request, res: Response): Promise<void> => {

@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
-import {isTokenValid} from '../utils/jwt' // Function to validate JWT
+import { isTokenValid } from "../utils/jwt"; // Function to validate JWT
 import { StatusCodes } from "http-status-codes";
 import crypto from "crypto";
 
-import ApiKey from '../model/ApiKey';
+import Instance from "../model/Instance";
 
-// Generate a random API key
-const generateApiKey = (): string => {
+// Generate a random instance key
+const generateInstanceKey = (): string => {
   return crypto.randomBytes(32).toString("hex"); // Secure random key
 };
 
@@ -21,25 +21,24 @@ const getUserFromToken = (req: Request) => {
   return isTokenValid(token); // Should return { name, email, userId }
 };
 
-// Create a new API key
-export const createApiKey = async (req: Request, res: Response): Promise<void> => {
+// Create a new instance
+export const createInstance = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = getUserFromToken(req);
-    
+
     if (!user) {
       res.status(401).json({ error: "Unauthorized: User not found" });
       return;
     }
 
-    const apiKey = await ApiKey.create({
-      key: generateApiKey(),
+    const instance = await Instance.create({
+      key: generateInstanceKey(),
       user: user._id,
       // expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days validity
     });
 
-    res.status(StatusCodes.CREATED).json({ apiKey: apiKey.key });
+    res.status(StatusCodes.CREATED).json({ instanceKey: instance.key });
   } catch (error) {
-    // Check if the error is of type Error
     if (error instanceof Error) {
       res.status(StatusCodes.UNAUTHORIZED).json({ message: error.message });
     } else {
@@ -48,15 +47,14 @@ export const createApiKey = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-// Get all API keys for the authenticated user
-export const getApiKeys = async (req: Request, res: Response): Promise<void> => {
+// Get all instances for the authenticated user
+export const getInstances = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = getUserFromToken(req);
 
-    const apiKeys = await ApiKey.find({ user: user, isRevoked: false }).select("key createdAt expiresAt");
-    res.status(StatusCodes.OK).json({ apiKeys });
+    const instances = await Instance.find({ user: user, isRevoked: false }).select("key createdAt expiresAt");
+    res.status(StatusCodes.OK).json({ instances });
   } catch (error) {
-    // Check if the error is of type Error
     if (error instanceof Error) {
       res.status(StatusCodes.UNAUTHORIZED).json({ message: error.message });
     } else {
@@ -65,24 +63,23 @@ export const getApiKeys = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// Revoke an API key
-export const revokeApiKey = async (req: Request, res: Response): Promise<void> => {
+// Revoke an instance
+export const revokeInstance = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = getUserFromToken(req);
     const { key } = req.body;
 
-    const apiKey = await ApiKey.findOne({ key, user: user });
-    if (!apiKey) {
-      res.status(StatusCodes.NOT_FOUND).json({ message: "API key not found" });
+    const instance = await Instance.findOne({ key, user: user });
+    if (!instance) {
+      res.status(StatusCodes.NOT_FOUND).json({ message: "Instance not found" });
       return;
     }
 
-    apiKey.isRevoked = true;
-    await apiKey.save();
+    instance.isRevoked = true;
+    await instance.save();
 
-    res.status(StatusCodes.OK).json({ message: "API key revoked successfully" });
+    res.status(StatusCodes.OK).json({ message: "Instance revoked successfully" });
   } catch (error) {
-    // Check if the error is of type Error
     if (error instanceof Error) {
       res.status(StatusCodes.UNAUTHORIZED).json({ message: error.message });
     } else {
@@ -90,4 +87,3 @@ export const revokeApiKey = async (req: Request, res: Response): Promise<void> =
     }
   }
 };
-

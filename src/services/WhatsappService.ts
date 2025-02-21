@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 // import { notifyUser } from '../websocket';
 import { WebSocket } from 'ws';
 import axios from 'axios';
-import ApiKey from '../model/ApiKey';
+import ApiKey from '../model/Instance';
 import WebhookService from './WebhookServices';
 
 interface SessionInfo {
