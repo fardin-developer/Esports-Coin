@@ -15,6 +15,7 @@ import message from './routes/messages';
 import qrRoute from './routes/qr';
 import user from './routes/user'
 import webhook from './routes/webhook';
+import instanceRoute from './routes/instance'
 dotenv.config();
 
 const app: Express = express();
@@ -36,9 +37,10 @@ app.use('/api/v1/doc', serve, setup(swaggerFile));
 
 // Routes for messaging
 app.use('/api/v1/user', user);
+app.use('/api/v1/qr', qrRoute);
+app.use('/api/v1/instance', instanceRoute);
 app.use('/api/v1/webhook', webhook);
 app.use('/api/v1/message', message);
-app.use('/api/v1/qr', qrRoute);
 app.use('/api/v1/subscribe', notificationRoute);
 
 // Create HTTP server and integrate WebSocket

@@ -47,7 +47,35 @@ export const createInstance = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// Get all instances for the authenticated user
+//get a instance by id details
+export const getInstanceById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = getUserFromToken(req);
+    const { id } = req.params;
+    console.log(id);
+    
+
+    const instance = await Instance.findOne({ _id: id, user: user, isRevoked: false }).select("key createdAt expiresAt");
+
+    if (!instance) {
+      res.status(StatusCodes.NOT_FOUND).json({ message: "Instance not found" });
+      return;
+    }
+
+    res.status(StatusCodes.OK).json({ instance });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ message: error.message });
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "An unknown error occurred" });
+    }
+  }
+};
+  
+      
+
+
+// Get all instances for a authenticated user
 export const getInstances = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = getUserFromToken(req);

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import User, { IUser } from "../model/User"; // Ensure IUser is defined in your model
 import { createJWT } from "../utils/jwt";
-import ApiKey from "../model/Instance";
+import Instance from "../model/Instance";
 import crypto from "crypto";
 
 
@@ -13,7 +13,7 @@ const generateApiKey = (): string => {
 
 const saveAPIkey = async (user: IUser): Promise<void> => {
   try {
-     await ApiKey.create({
+     await Instance.create({
       key: generateApiKey(),
       user: user._id,
     });
