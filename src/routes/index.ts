@@ -5,10 +5,19 @@ import user from './user';
 import webhook from './webhook';
 import instanceRoute from './instance';
 import notificationRoute from './notifications';
+import { useAuth, AuthMethod } from '../middlewares';
+
 
 const setupRoutes = (app: express.Application) => {
-    app.use('/api/v1/user', user);
-    app.use('/api/v1/qr', qrRoute);
+    app.use(
+        '/api/v1/user', 
+        user
+    );
+    app.use(
+        '/api/v1/qr',
+        useAuth([AuthMethod.JWT, AuthMethod.API_KEY]),
+        qrRoute
+    );
     app.use('/api/v1/instance', instanceRoute);
     app.use('/api/v1/webhook', webhook);
     app.use('/api/v1/message', message);
