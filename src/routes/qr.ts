@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { WhatsAppService } from "../services/WhatsappService";
-import { isTokenValid } from "../utils/jwt";
+import { isTokenValid } from "../middlewares/jwt";
 import { asyncHandler } from '../middlewares';
 
 const router = Router();

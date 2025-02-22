@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { isTokenValid } from '../utils/jwt';
+import { isTokenValid } from './jwt';
 import User, { IUser } from '../model/User';
 
 declare global {

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { isTokenValid } from "../utils/jwt"; // Function to validate JWT
+import { isTokenValid } from "../middlewares/jwt"; // Function to validate JWT
 import { StatusCodes } from "http-status-codes";
 import crypto from "crypto";
 

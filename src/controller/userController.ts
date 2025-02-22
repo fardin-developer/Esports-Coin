@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import User, { IUser } from "../model/User"; // Ensure IUser is defined in your model
-import { createJWT } from "../utils/jwt";
+import { createJWT } from "../middlewares/jwt";
 import Instance from "../model/Instance";
 import crypto from "crypto";
 
