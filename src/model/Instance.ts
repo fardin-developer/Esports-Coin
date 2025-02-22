@@ -8,6 +8,7 @@ interface InstanceDocument extends Document {
   createdAt: Date;
   expiresAt: Date | null;
   isRevoked: boolean;
+  connected: boolean;
 }
 
 const instanceSchema = new Schema<InstanceDocument>({
@@ -17,6 +18,7 @@ const instanceSchema = new Schema<InstanceDocument>({
   sessionId: { type: String },
   createdAt: { type: Date, default: Date.now },
   isRevoked: { type: Boolean, default: false },
+  connected: { type: Boolean, default: false },
 });
 
 const Instance = mongoose.model<InstanceDocument>('Instance', instanceSchema);

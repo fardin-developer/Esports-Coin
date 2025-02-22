@@ -3,8 +3,10 @@ const router = Router();
 
 
 import { register, login } from "../controller/userController";
-router.post('/register', register);
-router.post('/login', login);
+import { asyncHandler } from "../middlewares";
+
+router.post('/register', asyncHandler(register));
+router.post('/login', asyncHandler(login));
 
 
 export default router

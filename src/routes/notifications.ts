@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { notificationEmitter } from '../services/notification';
+import { asyncHandler } from '../middlewares';
 
 const router = Router();
 
-// Subscribe to new message notifications
-router.get('/', (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -20,6 +20,6 @@ router.get('/', (req, res) => {
         console.log('SSE connection closed.');
         notificationEmitter.off('newMessage', onMessage);
     });
-});
+}));
 
 export default router;

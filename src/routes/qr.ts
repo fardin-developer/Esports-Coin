@@ -1,83 +1,49 @@
 import { Request, Response, Router } from 'express';
 import { WhatsAppService } from "../services/WhatsappService";
 import { isTokenValid } from "../utils/jwt";
+import { asyncHandler } from '../middlewares';
 
 const router = Router();
 const whatsappService = WhatsAppService.getInstance();
 
-router.get('/get_qr_code', async (req: Request, res: Response) => {
-    try {
-        const token = req.query.token as string | undefined;
-        console.log("hittttt", token);
+router.post('/get_qr_code', asyncHandler(async (req: Request, res: Response) => {
+    const token = req.headers.authorization as string | undefined;
+    const instanceId = req.body.instance_id as string | undefined;
 
+    console.log(token, "the token");
 
-        if (!token) {
-            res.status(400).json({
-                success: false,
-                msg: 'Token is required'
-            });
-            return;
-        }
-
-        const user = isTokenValid(token);
-        console.log(user);
-
-
-        if (!user) {
-            res.status(401).json({
-                success: false,
-                msg: 'Invalid token'
-            });
-            return;
-        }
-
-        const { sessionId, qrCode } = await whatsappService.generateSession(null, user._id);
-        res.json({
-            success: true,
-            data: { sessionId, qrCodeUrl: qrCode }
-        });
-        return;
-
-    } catch (error) {
-        console.error('Error in QR code generation:', error);
-        res.status(500).json({
-            success: false,
-            msg: 'Internal server error',
-            error: error instanceof Error ? error.message : 'Unknown error'
-        });
-        return;
+    if (!token) {
+        return res.status(400).json({ success: false, msg: 'Token is required' });
     }
-});
-
-router.get('/get-status', async(req, res) => {
-    try {
-        const sessionId = req.query.sessionId as string;
-        
-        if (!sessionId) {
-            res.status(400).json({
-                success: false,
-                msg: 'Session ID is required'
-            });
-        }
-
-        const sessionStatus = await whatsappService.getSessionStatus(sessionId);
-
-        console.log(sessionStatus);
-        res.json({
-            success: true,
-            data: sessionStatus
-        });
-
-
-
-    } catch (error) {
-
+    if (!instanceId) {
+        return res.status(400).json({ success: false, msg: 'Instance ID is required' });
     }
-})
 
-// router.get('/test',(req,res)=>{
-//     console.log('testttt');
-    
-// })
+    const user = isTokenValid(token);
+    console.log(user);
+    if (!user) {
+        return res.status(401).json({ success: false, msg: 'Invalid token' });
+    }
+
+    const { sessionId, qrCode } = await whatsappService.generateSession(
+        null,
+        user._id,
+        instanceId
+    );
+
+    res.json({ success: true, data: { sessionId, qrCodeUrl: qrCode } });
+}));
+
+router.get('/get-status', asyncHandler(async (req: Request, res: Response) => {
+    const instanceId = req.query.instance_id as string;
+    if (!instanceId) {
+        return res.status(400).json({ success: false, msg: 'Session ID is required' });
+    }
+
+    const sessionStatus = await whatsappService.getSessionStatusByInstanceId(instanceId);
+    console.log(sessionStatus);
+
+    res.json({ success: true, data: sessionStatus });
+}));
 
 export default router;

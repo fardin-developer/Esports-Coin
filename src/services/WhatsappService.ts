@@ -11,7 +11,7 @@ import axios from 'axios';
 import mongoose from 'mongoose';
 
 
-import ApiKey from '../model/Instance';
+// import ApiKey from '../model/Instance';
 import Instance from '../model/Instance';
 
 import WebhookService from './WebhookServices';
@@ -63,7 +63,7 @@ export class WhatsAppService {
 
     private async getWebhookUrlForSession(sessionId: string): Promise<string> {
         try {
-            const metaData = await ApiKey.findOne({ sessionId });
+            const metaData = await Instance.findOne({ sessionId });
 
             if (metaData && metaData.webhookUrl) {
                 return metaData.webhookUrl; // Return the stored webhook URL
@@ -101,7 +101,7 @@ export class WhatsAppService {
         }
     }
 
-    async generateSession(ws: WebSocket | null = null, userId: string): Promise<{ sessionId: string, qrCode: string, userId: string }> {
+    async generateSession(ws: WebSocket | null = null, userId: string, instanceId: string): Promise<{ sessionId: string, qrCode: string, userId: string }> {
         const sessionId = uuidv4();
         const sessionPath = path.join(this.AUTH_BASE_DIR, sessionId);
         const tempAuthState = await useMultiFileAuthState(sessionPath);
@@ -122,8 +122,8 @@ export class WhatsAppService {
 
         try {
             // Update the sessionid for the user in the Instance
-            const updatedSessionId = await ApiKey.findOneAndUpdate(
-                { user: userId },  // Find by user ID
+            const updatedSessionId = await Instance.findOneAndUpdate(
+                { user: userId, key: instanceId },
                 {
                     sessionId: sessionId
                 },
@@ -305,10 +305,15 @@ export class WhatsAppService {
         }
     }
 
-    async getSessionStatus(sessionId: string): Promise<{
+    async getSessionStatusByInstanceId(instanceId: string): Promise<{
         status: string;
         error?: string;
     }> {
+        const instance = await Instance.findOne({ key: instanceId });
+        if (!instance) {
+            return { status: 'not_found', error: 'Instance not found' };
+        }
+        const sessionId = instance.sessionId;
         let session = this.sessions.get(sessionId);
 
         if (!session) {

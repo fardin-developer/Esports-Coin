@@ -2,20 +2,18 @@ import { Router, Request, Response } from 'express';
 import { getWhatsAppSocket } from '../services';
 import { proto } from '@whiskeysockets/baileys'; // Importing Baileys types
 import { WhatsAppService } from '../services/WhatsappService';
+import { asyncHandler } from '../middlewares';
 
 const whatsappService = WhatsAppService.getInstance();
 const router = Router();
 
-router.post('/send', async (req: Request, res: Response) => {
+router.post('/send', asyncHandler(async (req: Request, res: Response) => {
     const { to, message, sessionId }: { to: string; message: string, sessionId: string } = req.body;
     await whatsappService.sendMessage(sessionId, to, message);
     res.json({ success: true });
-});
+}));
 
-
-
-
-router.post('/send-bulk', async (req: Request, res: Response) => {
+router.post('/send-bulk', asyncHandler(async (req: Request, res: Response) => {
     const { messages }: { messages: { to: string; message: string }[] } = req.body;
 
     // Validate input
@@ -78,7 +76,6 @@ router.post('/send-bulk', async (req: Request, res: Response) => {
             error: error instanceof Error ? error.message : 'Failed to send bulk messages',
         });
     }
-});
-
+}));
 
 export default router;
