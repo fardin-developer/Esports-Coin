@@ -305,7 +305,7 @@ export class WhatsAppService {
         }
     }
 
-    async getSessionStatusByInstanceId(instanceId: string): Promise<{
+    async getSessionStatusByInstanceKey(instanceId: string): Promise<{
         status: string;
         error?: string;
     }> {
