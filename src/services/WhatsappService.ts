@@ -8,8 +8,14 @@ import { v4 as uuidv4 } from 'uuid';
 // import { notifyUser } from '../websocket';
 import { WebSocket } from 'ws';
 import axios from 'axios';
+import mongoose from 'mongoose';
+
+
 import ApiKey from '../model/Instance';
+import Instance from '../model/Instance';
+
 import WebhookService from './WebhookServices';
+import { MessageStatsService } from './MessageStatsService';
 
 interface SessionInfo {
     id: string;
@@ -115,7 +121,7 @@ export class WhatsAppService {
         this.sessions.set(sessionId, session);
 
         try {
-            // Update the sessionid for the user in the database
+            // Update the sessionid for the user in the Instance
             const updatedSessionId = await ApiKey.findOneAndUpdate(
                 { user: userId },  // Find by user ID
                 {
@@ -286,6 +292,12 @@ export class WhatsAppService {
 
             // Clear "typing..." status
             await session.socket.sendPresenceUpdate('paused', jid);
+
+            const instance = await Instance.findOne({ sessionId });
+            if (!instance) {
+                throw new Error("Instance not found");
+            }
+            await MessageStatsService.incrementSentMessage(instance.user, instance._id as mongoose.Types.ObjectId);
 
         } catch (error) {
             console.error('Error sending message:', error);

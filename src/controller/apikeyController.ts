@@ -37,7 +37,7 @@ export const createInstance = async (req: Request, res: Response): Promise<void>
       // expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days validity
     });
 
-    res.status(StatusCodes.CREATED).json({ instanceKey: instance.key });
+    res.status(StatusCodes.CREATED).json({ instance });
   } catch (error) {
     if (error instanceof Error) {
       res.status(StatusCodes.UNAUTHORIZED).json({ message: error.message });
