@@ -1,9 +1,10 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model, Types } from "mongoose";
 import validator from "validator";
 import bcrypt from "bcryptjs";
 
 // Define the interface for the User model
 export interface IUser extends Document {
+  _id: Types.ObjectId;
   name: string;
   email: string;
   verified: boolean;
