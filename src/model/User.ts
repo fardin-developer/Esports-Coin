@@ -8,6 +8,7 @@ export interface IUser extends Document {
   email: string;
   verified: boolean;
   password: string;
+  apiKey: string | null;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -35,6 +36,10 @@ const UserSchema: Schema<IUser> = new mongoose.Schema({
   password: {
     type: String,
     required: [true, "Please provide password"],
+    minlength: 6,
+  },
+  apiKey: {
+    type: String,
     minlength: 6,
   },
 });
