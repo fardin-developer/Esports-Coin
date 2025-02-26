@@ -2,27 +2,12 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import User, { IUser } from "../model/User"; // Ensure IUser is defined in your model
 import { createJWT } from "../middlewares/jwt";
-import Instance from "../model/Instance";
 import crypto from "crypto";
 
 
 const generateApiKey = (): string => {
   return crypto.randomBytes(32).toString("hex");
 };
-
-
-const saveAPIkey = async (user: IUser): Promise<void> => {
-  try {
-     await Instance.create({
-      key: generateApiKey(),
-      user: user._id,
-    });
-      
-  } catch (error) {
-    console.error("Error saving API key:", error);
-  }
-};
-
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -32,16 +17,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       res.status(StatusCodes.BAD_REQUEST).json({ message: "Email already exists" });
       return;
     }
-
+    const apiKey = generateApiKey();
     // Create new user
-    const user = await User.create({ name, email, password });
+    const user = await User.create({ name, email, password,apiKey });
 
     // Extract user data for token
     const { name: userName, email: userEmail } = user;
     const token = createJWT({ name: userName, email: userEmail, _id: user.id });
-
-    // Generate and save API key
-     await saveAPIkey(user);
 
     // Respond with user data and token
     res.status(StatusCodes.CREATED).json({ user: { name: userName, email: userEmail }, token });

@@ -158,6 +158,8 @@ export class WhatsAppService {
                             session.status = 'connected';
                             this.setupEventListeners(sessionId, sock, tempAuthState.saveCreds);
                         } else if (connection === 'close') {
+                            console.log(`connection close    ............................ ${update}`);
+                            
                             await this.handleDisconnect(sessionId, update);
                         }
                     };
