@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import crypto from "crypto";
 
 import Instance from "../model/Instance";
+import { WhatsAppService } from "../services/WhatsappService";
 
 // Generate a random instance key
 const generateInstanceKey = (): string => {
@@ -28,13 +29,12 @@ export const createInstance = async (req: Request, res: Response): Promise<void>
 
 };
 
-//get a instance by instance key details
 export const getInstanceByKey = async (req: Request, res: Response): Promise<void> => {
     const user = req.user;
     const { key } = req.params;
     console.log(key);
 
-    const instance = await Instance.findOne({ key: key, user: user, isRevoked: false }).select("key createdAt expiresAt");
+    const instance = await Instance.findOne({ key: key, user: user, isRevoked: false }).select("key createdAt expiresAt connected");
 
     if (!instance) {
       res.status(StatusCodes.NOT_FOUND).json({ message: "Instance not found" });
@@ -45,17 +45,12 @@ export const getInstanceByKey = async (req: Request, res: Response): Promise<voi
   
 };
   
-      
-
-
-// Get all instances for a authenticated user
 export const getInstances = async (req: Request, res: Response): Promise<void> => {
     const user = req.user;
     const instances = await Instance.find({ user: user, isRevoked: false }).select("key createdAt expiresAt");
     res.status(StatusCodes.OK).json({ instances });
 };
 
-// Revoke an instance
 export const revokeInstance = async (req: Request, res: Response): Promise<void> => {
     const user = req.user;
     const { key } = req.body;
@@ -68,5 +63,20 @@ export const revokeInstance = async (req: Request, res: Response): Promise<void>
     await instance.save();
 
     res.status(StatusCodes.OK).json({ message: "Instance revoked successfully" });
+};
 
+export const disconnectInstance = async (req: Request, res: Response): Promise<void> => {
+    const user = req.user;
+    if (!user) {
+        res.status(StatusCodes.UNAUTHORIZED).json({ message: "Unauthorized" });
+        return;
+    }
+    const instanceKey = req.body.instance_key;
+    const instance = await Instance.findOne({ key: instanceKey, userId: user._id });
+    if (!instance) {
+        res.status(StatusCodes.NOT_FOUND).json({ message: "Instance not found" });
+        return;
+    }
+    WhatsAppService.getInstance().cleanupSession(instance.sessionId)
+    res.status(StatusCodes.OK).json({ message: "Instance disconnected successfully" });
 };

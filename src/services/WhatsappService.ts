@@ -95,13 +95,20 @@ export class WhatsAppService {
             const sock = makeWASocket({ auth: state, printQRInTerminal: false });
             session.socket = sock;
             this.sessions.set(sessionId, session);
+            await Instance.findOneAndUpdate(
+                { sessionId },
+                {
+                    connected: true,
+                },
+                { new: true, upsert: false }
+            );
             this.setupEventListeners(sessionId, sock, saveCreds);
         } catch (error) {
             await this.cleanupSession(sessionId);
         }
     }
 
-    async generateSession(ws: WebSocket | null = null, userId: string, instanceId: string): Promise<{ sessionId: string, qrCode: string, userId: string }> {
+    async generateSession(ws: WebSocket | null = null, userId: string, instanceKey: string): Promise<{ sessionId: string, qrCode: string, userId: string }> {
         const sessionId = uuidv4();
         const sessionPath = path.join(this.AUTH_BASE_DIR, sessionId);
         const tempAuthState = await useMultiFileAuthState(sessionPath);
@@ -123,7 +130,7 @@ export class WhatsAppService {
         try {
             // Update the sessionid for the user in the Instance
             const updatedSessionId = await Instance.findOneAndUpdate(
-                { user: userId, key: instanceId },
+                { user: userId, key: instanceKey },
                 {
                     sessionId: sessionId
                 },
@@ -156,6 +163,15 @@ export class WhatsAppService {
 
                         if (connection === 'open') {
                             session.status = 'connected';
+
+                            await Instance.findOneAndUpdate(
+                                { user: userId, key: instanceKey },
+                                {
+                                    sessionId: sessionId,
+                                    connected: true,
+                                },
+                                { new: true, upsert: false }
+                            );
                             this.setupEventListeners(sessionId, sock, tempAuthState.saveCreds);
                         } else if (connection === 'close') {
                             console.log(`connection close    ............................ ${update}`);
@@ -194,7 +210,7 @@ export class WhatsAppService {
         }
     }
 
-    private async cleanupSession(sessionId: string): Promise<void> {
+    async cleanupSession(sessionId: string): Promise<void> {
         const sessionPath = path.join(this.AUTH_BASE_DIR, sessionId);
         this.sessions.delete(sessionId);
 
@@ -202,7 +218,16 @@ export class WhatsAppService {
             if (fs.existsSync(sessionPath)) {
                 fs.rmSync(sessionPath, { recursive: true });
                 console.log(`Deleted session folder: ${sessionPath}`);
-            }
+            };
+
+            await Instance.findOneAndUpdate(
+                { sessionId },
+                {
+                    connected: false,
+                    sessionId: null,
+                },
+                { new: true, upsert: false }
+            );
         } catch (error) {
             console.error(`Failed to delete session ${sessionId}:`, error);
         }
