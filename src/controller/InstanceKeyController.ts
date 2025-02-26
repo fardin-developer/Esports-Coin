@@ -72,7 +72,7 @@ export const disconnectInstance = async (req: Request, res: Response): Promise<v
         return;
     }
     const instanceKey = req.body.instance_key;
-    const instance = await Instance.findOne({ key: instanceKey, userId: user._id });
+    const instance = await Instance.findOne({ key: instanceKey });
     if (!instance) {
         res.status(StatusCodes.NOT_FOUND).json({ message: "Instance not found" });
         return;
