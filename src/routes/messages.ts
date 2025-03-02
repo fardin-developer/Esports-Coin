@@ -3,12 +3,23 @@ import { getWhatsAppSocket } from '../services';
 import { proto } from '@whiskeysockets/baileys'; // Importing Baileys types
 import { WhatsAppService } from '../services/WhatsappService';
 import { asyncHandler } from '../middlewares';
+import Instance from '../model/Instance';
 
 const whatsappService = WhatsAppService.getInstance();
 const router = Router();
 
 router.post('/send', asyncHandler(async (req: Request, res: Response) => {
-    const { to, message, sessionId }: { to: string; message: string, sessionId: string } = req.body;
+    if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    };
+    const { to, message, instanceKey }: { to: string; message: string, instanceKey: string } = req.body;
+    const instanceDoc = await Instance.findOne({ key: instanceKey, user: req.user._id });
+
+    if (!instanceDoc) {
+        throw new Error("Instance not found");
+    }
+    const sessionId = instanceDoc.sessionId;
     await whatsappService.sendMessage(sessionId, to, message);
     res.json({ success: true });
 }));

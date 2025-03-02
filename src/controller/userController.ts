@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import e, { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import User, { IUser } from "../model/User"; // Ensure IUser is defined in your model
 import { createJWT } from "../middlewares/jwt";
@@ -85,52 +85,12 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   res.status(StatusCodes.OK).json({ msg: "User logged out" });
 };
 
-/**
- * Verifies a JWT and responds with the user details.
- */
-// export const jwtVerify = (req: Request, res: Response): void => {
-//   const token = req.query.token as string;
-//   try {
-//     const { name, userId, role } = isTokenValid({ token });
-//     res.status(StatusCodes.OK).json({
-//       user: {
-//         name,
-//         userId,
-//         role,
-//       },
-//     });
-//   } catch (error) {
-//     res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid token" });
-//   }
-// };
-
-/**
- * Updates a user's profile information, such as name or password.
- */
-// export const updateProfile = async (req: Request, res: Response): Promise<void> => {
-//   const { name, token, password } = req.query;
-//   try {
-//     const { userId } = isTokenValid({ token: token as string });
-
-//     const user = await User.findById(userId);
-//     if (!user) {
-//       res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
-//       return;
-//     }
-
-//     if (name) {
-//       user.name = name as string;
-//     }
-
-//     if (password) {
-//       const salt = await bcrypt.genSalt(10);
-//       user.password = await bcrypt.hash(password as string, salt);
-//     }
-
-//     await user.save();
-//     res.status(StatusCodes.OK).json({ user });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "An error occurred. Please try again later." });
-//   }
-// };
+export const getUser = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid token" });
+    return;
+  }
+  const { _id } = req.user;
+  const user = await User.findById(_id).select('name email apiKey');
+  res.status(StatusCodes.OK).json(user);
+};
