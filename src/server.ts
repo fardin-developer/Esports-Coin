@@ -14,7 +14,7 @@ const server = http.createServer(app);
 
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://localhost:3002'],
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
