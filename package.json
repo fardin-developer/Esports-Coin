@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npx ts-node src/server.ts",
-    "doc": "node src/doc/swagger.js"
+    "doc": "node src/doc/swagger.js",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
