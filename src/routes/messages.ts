@@ -20,6 +20,10 @@ router.post('/send', asyncHandler(async (req: Request, res: Response) => {
         throw new Error("Instance not found");
     }
     const sessionId = instanceDoc.sessionId;
+    console.log(instanceDoc);
+    
+    console.log(sessionId);
+    
     await whatsappService.sendMessage(sessionId, to, message);
     res.json({ success: true });
 }));

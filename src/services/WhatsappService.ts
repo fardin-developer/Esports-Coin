@@ -7,7 +7,7 @@ import { existsSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 // import { notifyUser } from '../websocket';
 import { WebSocket } from 'ws';
-import axios from 'axios';
+// import axios from 'axios';
 import mongoose from 'mongoose';
 
 
@@ -66,7 +66,7 @@ export class WhatsAppService {
             const metaData = await Instance.findOne({ sessionId });
 
             if (metaData && metaData.webhookUrl) {
-                return metaData.webhookUrl; // Return the stored webhook URL
+                return metaData.webhookUrl; 
             }
 
             console.warn(`No webhook URL found for session ID: ${sessionId}`);
@@ -134,7 +134,7 @@ export class WhatsAppService {
                 {
                     sessionId: sessionId
                 },
-                { new: true, upsert: false } // Return the updated document
+                { new: true, upsert: true,setDefaultsOnInsert: true } // Return the updated document
             );
 
             if (!updatedSessionId) {
@@ -283,8 +283,16 @@ export class WhatsAppService {
                 text: message.message.conversation || message.message.extendedTextMessage?.text || '',
                 type: Object.keys(message.message)[0]
             };
-            console.log(messageData);
+            // console.log(messageData);
 
+            const instance = await Instance.findOne({ sessionId });
+            if (!instance) {
+                console.error(`Instance not found for session: ${sessionId}`);
+                return;
+            }
+
+            // Increment the received message count
+            await MessageStatsService.incrementReceivedMessage(instance.user, instance._id as mongoose.Types.ObjectId);
 
 
             const session = this.sessions.get(sessionId);
@@ -292,7 +300,6 @@ export class WhatsAppService {
                 await session.webhookService.send(sessionId, phoneNumber, messageData);
             }
 
-            // notifyUser(sessionId, msg.messages);
         });
     }
 

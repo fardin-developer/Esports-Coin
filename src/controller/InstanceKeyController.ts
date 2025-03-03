@@ -47,7 +47,9 @@ export const getInstanceByKey = async (req: Request, res: Response): Promise<voi
   
 export const getInstances = async (req: Request, res: Response): Promise<void> => {
     const user = req.user;
-    const instances = await Instance.find({ user: user, isRevoked: false }).select("key createdAt expiresAt");
+    const instances = await Instance.find({ user: user, isRevoked: false });
+    console.log(instances);
+    
     res.status(StatusCodes.OK).json({ instances });
 };
 
