@@ -9,7 +9,7 @@ class WebhookService {
 
     async send(sessionId: string, phoneNumber: string, message: any): Promise<void> {
         try {
-            await axios.post(this.webhookUrl, {
+            await axios.post("http://localhost:8000/api/v1/webhook/whatsapp", {
                 sessionId,
                 phoneNumber,
                 message
