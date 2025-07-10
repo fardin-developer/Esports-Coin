@@ -1,15 +1,23 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Wa Bot ",
-    "description": "Description",
+    "title": "ESports Coin API",
+    "description": "API documentation for ESports Coin application",
     "version": "1.0.0"
   },
   "host": "localhost:3000",
-  "basePath": "/",
+  "basePath": "/api/v1",
   "schemes": [
     "http"
   ],
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "JWT token in format: Bearer <token>"
+    }
+  },
   "paths": {
     "/api/v1/user/register": {
       "post": {
@@ -31,54 +39,7 @@
         }
       }
     },
-    "/api/v1/qr/get_qr_code": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "instance_key": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          }
-        }
-      }
-    },
-    "/api/v1/qr/get-status": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "instance_key",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          }
-        }
-      }
-    },
-    "/api/v1/instance/create": {
+    "/api/v1/user/logout": {
       "post": {
         "description": "",
         "responses": {
@@ -88,7 +49,7 @@
         }
       }
     },
-    "/api/v1/instance/all": {
+    "/api/v1/user/me": {
       "get": {
         "description": "",
         "responses": {
@@ -98,7 +59,17 @@
         }
       }
     },
-    "/api/v1/instance/{id}": {
+    "/api/v1/games/create": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v1/games/get-all": {
       "get": {
         "description": "",
         "responses": {
@@ -108,129 +79,7 @@
         }
       }
     },
-    "/api/v1/webhook/{apiKey}": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "apiKey",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "webhookUrl": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/v1/message/send": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "to": {
-                  "example": "any"
-                },
-                "message": {
-                  "example": "any"
-                },
-                "sessionId": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/message/send-bulk": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "messages": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/v1/subscribe/": {
-      "get": {
-        "description": "",
-        "produces": [
-          "text/event-stream"
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/create": {
-      "post": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/all": {
+    "/api/v1/games/{id}": {
       "get": {
         "description": "",
         "responses": {
@@ -240,7 +89,7 @@
         }
       }
     },
-    "/{id}": {
+    "/api/v1/wallet/balance": {
       "get": {
         "description": "",
         "responses": {
@@ -250,72 +99,39 @@
         }
       }
     },
-    "/send": {
+    "/api/v1/wallet/add": {
       "post": {
         "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "to": {
-                  "example": "any"
-                },
-                "message": {
-                  "example": "any"
-                },
-                "sessionId": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "default": {
+            "description": ""
           }
         }
       }
     },
-    "/send-bulk": {
+    "/api/v1/wallet/deduct": {
       "post": {
         "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "messages": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
         }
       }
     },
-    "/": {
+    "/api/v1/order/": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v1/order/history": {
       "get": {
         "description": "",
-        "produces": [
-          "text/event-stream"
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -323,54 +139,27 @@
         }
       }
     },
-    "/get_qr_code": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "instance_key": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          }
-        }
-      }
-    },
-    "/get-status": {
+    "/api/v1/order/{orderId}": {
       "get": {
         "description": "",
-        "parameters": [
-          {
-            "name": "instance_key",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
+          "default": {
+            "description": ""
           }
         }
       }
     },
-    "/register": {
+    "/api/v1/order/{orderId}/status": {
+      "patch": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v1/transaction/": {
       "post": {
         "description": "",
         "responses": {
@@ -380,8 +169,8 @@
         }
       }
     },
-    "/login": {
-      "post": {
+    "/api/v1/transaction/history": {
+      "get": {
         "description": "",
         "responses": {
           "default": {
@@ -390,42 +179,77 @@
         }
       }
     },
-    "/{apiKey}": {
-      "post": {
+    "/api/v1/transaction/{transactionId}": {
+      "get": {
         "description": "",
-        "parameters": [
-          {
-            "name": "apiKey",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "webhookUrl": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
+        }
+      }
+    },
+    "/api/v1/transaction/{transactionId}/status": {
+      "patch": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "string"
+        },
+        "email": {
+          "type": "string",
+          "example": "string"
+        },
+        "walletBalance": {
+          "type": "number",
+          "example": 0
+        }
+      }
+    },
+    "Game": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "string"
+        },
+        "image": {
+          "type": "string",
+          "example": "string"
+        },
+        "publisher": {
+          "type": "string",
+          "example": "string"
+        }
+      }
+    },
+    "WalletAdd": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "number",
+          "example": 0
+        }
+      }
+    },
+    "WalletDeduct": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "number",
+          "example": 0
         }
       }
     }

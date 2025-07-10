@@ -20,6 +20,9 @@ app.use(cors({
   credentials: true
 }));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 app.get('/test', (req: Request, res: Response) => {
   res.send('Express + TypeScript Server');
 });

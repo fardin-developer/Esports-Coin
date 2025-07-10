@@ -91,6 +91,6 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
     return;
   }
   const { _id } = req.user;
-  const user = await User.findById(_id).select('name email apiKey');
+  const user = await User.findById(_id).select('name email apiKey walletBalance');
   res.status(StatusCodes.OK).json(user);
 };
