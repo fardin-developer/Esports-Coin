@@ -10,7 +10,6 @@ const params = {
   time: Math.floor(Date.now() / 1000), // current UNIX timestamp
 };
 
-// Step 1: Sort params alphabetically
 const sortedKeys = Object.keys(params).sort();
 let strToHash = "";
 
