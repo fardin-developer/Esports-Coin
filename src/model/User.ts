@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 export interface IUser extends Document {
   _id: Types.ObjectId;
   name: string;
+  phone: string;
   email: string;
   verified: boolean;
   password: string;
@@ -24,10 +25,33 @@ const UserSchema: Schema<IUser> = new mongoose.Schema({
     minlength: 3,
     maxlength: 30,
   },
+  phone: {
+    type: String,
+    required: [true, "Please provide phone number"],
+    unique: true,
+    validate: {
+      validator: function(value: string) {
+        // Indian mobile number validation
+        // Accepts formats: +919876543210, 9876543210, +91 98765 43210, 98765-43210
+        // Indian mobile numbers start with 6, 7, 8, or 9 and are exactly 10 digits
+        const cleanNumber = value.replace(/[\s\-\(\)]/g, '');
+        
+        // Check if it starts with +91 (country code)
+        if (cleanNumber.startsWith('+91')) {
+          const numberWithoutCode = cleanNumber.substring(3);
+          return /^[6-9]\d{9}$/.test(numberWithoutCode);
+        }
+        
+        // Check if it's a 10-digit Indian mobile number
+        return /^[6-9]\d{9}$/.test(cleanNumber);
+      },
+      message: "Please provide a valid Indian mobile number (10 digits starting with 6, 7, 8, or 9)"
+    }
+  },
   email: {
     type: String,
     unique: true,
-    required: [true, "Please provide email"],
+    required: [false, "Please provide email"],
     validate: {
       validator: (value: string) => validator.isEmail(value),
       message: "Please provide valid email",
@@ -37,15 +61,15 @@ const UserSchema: Schema<IUser> = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  password: {
-    type: String,
-    required: [true, "Please provide password"],
-    minlength: 6,
-  },
-  apiKey: {
-    type: String,
-    minlength: 6,
-  },
+  // password: {
+  //   type: String,
+  //   required: [true, "Please provide password"],
+  //   minlength: 6,
+  // },
+  // apiKey: {
+  //   type: String,
+  //   minlength: 6,
+  // },
   walletBalance: {
     type: Number,
     default: 0,
@@ -60,19 +84,19 @@ const UserSchema: Schema<IUser> = new mongoose.Schema({
 });
 
 // Middleware to hash password before saving
-UserSchema.pre<IUser>("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
+// UserSchema.pre<IUser>("save", async function (next) {
+//   if (!this.isModified("password")) return next();
+//   const salt = await bcrypt.genSalt(10);
+//   this.password = await bcrypt.hash(this.password, salt);
+//   next();
+// });
 
-// Add an instance method for comparing passwords
-UserSchema.methods.comparePassword = async function (
-  candidatePassword: string
-): Promise<boolean> {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
+// // Add an instance method for comparing passwords
+// UserSchema.methods.comparePassword = async function (
+//   candidatePassword: string
+// ): Promise<boolean> {
+//   return await bcrypt.compare(candidatePassword, this.password);
+// };
 
 // Add money to wallet (safe addition)
 UserSchema.methods.addToWallet = async function(amount: number): Promise<void> {
