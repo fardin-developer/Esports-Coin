@@ -3,7 +3,8 @@ import {
   createOrder, 
   getOrderHistory, 
   getOrderById, 
-  updateOrderStatus 
+  updateOrderStatus,
+  createDiamondPackOrder
 } from '../../controller/orderController';
 import { asyncHandler, useAuth, AuthMethod } from '../../middlewares';
 
@@ -14,6 +15,9 @@ router.use(useAuth([AuthMethod.JWT]));
 
 // Create a new order
 router.post('/', asyncHandler(createOrder));
+
+// Create diamond pack order with external API integration
+router.post('/diamond-pack', asyncHandler(createDiamondPackOrder));
 
 // Get order history with pagination and filtering
 router.get('/history', asyncHandler(getOrderHistory));

@@ -123,6 +123,8 @@ export const verifyOTP = async (phone: string, otp: string): Promise<{ success: 
 
     // Check if user exists
     const user = await User.findOne({ phone });
+    console.log(user);
+    
     const userExists = !!user;
 
     return {

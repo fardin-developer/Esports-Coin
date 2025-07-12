@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { register, login, logout, getUser, sendPhoneOTP, verifyPhoneOTP, completeRegistration } from "../../controller/userController";
+import {  logout, getUser, sendPhoneOTP, verifyPhoneOTP, completeRegistration } from "../../controller/userController";
 import { asyncHandler, useAuth, AuthMethod } from "../../middlewares";
 
 // Phone-based authentication routes
@@ -10,8 +10,8 @@ router.post('/verify-otp', asyncHandler(verifyPhoneOTP));
 router.post('/complete-registration', asyncHandler(completeRegistration));
 
 // Legacy email-based authentication routes
-router.post('/register', asyncHandler(register));
-router.post('/login', asyncHandler(login));
+// router.post('/register', asyncHandler(register));
+// router.post('/login', asyncHandler(login));
 
 //peofile 
 router.post('/logout', asyncHandler(logout));

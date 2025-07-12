@@ -12,7 +12,7 @@ export interface IUser extends Document {
   password: string;
   apiKey: string | null;
   walletBalance: number;
-  comparePassword(candidatePassword: string): Promise<boolean>;
+  // comparePassword(candidatePassword: string): Promise<boolean>;
   addToWallet(amount: number): Promise<void>;
   deductFromWallet(amount: number): Promise<boolean>;
 }

@@ -4,13 +4,20 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 export interface ITransaction extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
-  type: 'credit' | 'debit';
+  orderId: string; // OneGateway order ID
+  txnId?: string; // Transaction ID from gateway
   amount: number;
-  balanceAfter: number;
-  status: 'pending' | 'success' | 'failed';
-  method: string;
-  description: string;
+  paymentNote: string;
+  customerName: string;
+  customerEmail: string;
+  customerNumber: string;
+  redirectUrl: string;
+  utr?: string; // UTR number
+  payerUpi?: string; // Payer UPI ID
+  status: 'pending' | 'success' | 'failed' | 'cancelled';
+  gatewayResponse?: any; // Store OneGateway response
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // Create the Transaction schema
@@ -20,13 +27,15 @@ const TransactionSchema: Schema<ITransaction> = new mongoose.Schema({
     ref: 'User',
     required: [true, "Please provide user ID"],
   },
-  type: {
+  orderId: {
     type: String,
-    required: [true, "Please provide transaction type"],
-    enum: {
-      values: ['credit', 'debit'],
-      message: 'Type must be either credit or debit'
-    }
+    required: [true, "Please provide order ID"],
+    unique: true,
+    trim: true
+  },
+  txnId: {
+    type: String,
+    trim: true
   },
   amount: {
     type: Number,
@@ -39,38 +48,58 @@ const TransactionSchema: Schema<ITransaction> = new mongoose.Schema({
       message: 'Amount must be a valid number and cannot be negative'
     }
   },
-  balanceAfter: {
-    type: Number,
-    required: [true, "Please provide balance after transaction"],
+  paymentNote: {
+    type: String,
+    required: [true, "Please provide payment note"],
+    trim: true
+  },
+  customerName: {
+    type: String,
+    required: [true, "Please provide customer name"],
+    trim: true
+  },
+  customerEmail: {
+    type: String,
+    required: [true, "Please provide customer email"],
+    trim: true,
     validate: {
-      validator: function(value: number) {
-        return Number.isFinite(value) && value >= 0;
+      validator: function(value: string) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(value);
       },
-      message: 'Balance after must be a valid number and cannot be negative'
+      message: 'Please provide a valid email address'
     }
+  },
+  customerNumber: {
+    type: String,
+    required: [true, "Please provide customer number"],
+    trim: true
+  },
+  redirectUrl: {
+    type: String,
+    required: [true, "Please provide redirect URL"],
+    trim: true
+  },
+  utr: {
+    type: String,
+    trim: true
+  },
+  payerUpi: {
+    type: String,
+    trim: true
   },
   status: {
     type: String,
     required: [true, "Please provide status"],
     enum: {
-      values: ['pending', 'success', 'failed'],
-      message: 'Status must be pending, success, or failed'
+      values: ['pending', 'success', 'failed', 'cancelled'],
+      message: 'Status must be pending, success, failed, or cancelled'
     },
     default: 'pending'
   },
-  method: {
-    type: String,
-    required: [true, "Please provide payment method"],
-    trim: true
-  },
-  description: {
-    type: String,
-    required: [true, "Please provide description"],
-    trim: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  gatewayResponse: {
+    type: Schema.Types.Mixed, // Store any JSON response from OneGateway
+    default: null
   }
 }, {
   timestamps: true
@@ -78,8 +107,8 @@ const TransactionSchema: Schema<ITransaction> = new mongoose.Schema({
 
 // Create index for better query performance
 TransactionSchema.index({ userId: 1, createdAt: -1 });
+TransactionSchema.index({ orderId: 1 });
 TransactionSchema.index({ status: 1 });
-TransactionSchema.index({ type: 1 });
 
 // Export the Transaction model
 const Transaction: Model<ITransaction> = mongoose.model<ITransaction>("Transaction", TransactionSchema);

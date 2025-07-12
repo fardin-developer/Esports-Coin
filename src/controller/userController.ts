@@ -131,69 +131,69 @@ export const completeRegistration = async (req: Request, res: Response): Promise
   }
 };
 
-export const register = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { phone, name, password } = req.body;
+// export const register = async (req: Request, res: Response): Promise<void> => {
+//   try {
+//     const { phone, name, password } = req.body;
 
-    if (await User.findOne({ phone })) {
-      res.status(StatusCodes.BAD_REQUEST).json({ message: "phone number already exists" });
-      return;
-    }
-    // Create new user
-    const user = await User.create({ name, phone, password });
+//     if (await User.findOne({ phone })) {
+//       res.status(StatusCodes.BAD_REQUEST).json({ message: "phone number already exists" });
+//       return;
+//     }
+//     // Create new user
+//     const user = await User.create({ name, phone, password });
 
-    // Extract user data for token
-    const { name: userName, email: userEmail } = user;
-    const token = createJWT({ name: userName, email: userEmail, _id: user.id });
+//     // Extract user data for token
+//     const { name: userName, email: userEmail } = user;
+//     const token = createJWT({ name: userName, email: userEmail, _id: user.id });
 
-    // Respond with user data and token
-    res.status(StatusCodes.CREATED).json({ user: { name: userName, email: userEmail }, token });
-  } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: (error as Error).message });
-  }
-};
+//     // Respond with user data and token
+//     res.status(StatusCodes.CREATED).json({ user: { name: userName, email: userEmail }, token });
+//   } catch (error) {
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: (error as Error).message });
+//   }
+// };
 
 
 /**
  * Logs in a user by validating the provided email and password. If successful, responds
  * with the logged-in user object.
  */
-export const login = async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
+// export const login = async (req: Request, res: Response): Promise<void> => {
+//   const { email, password } = req.body;
 
-  try {
-    if (!email || !password) {
-      res.status(StatusCodes.BAD_REQUEST).json({ error: "Please provide email and password" });
-      return;
-    }
+//   try {
+//     if (!email || !password) {
+//       res.status(StatusCodes.BAD_REQUEST).json({ error: "Please provide email and password" });
+//       return;
+//     }
 
-    console.log(email, password);
+//     console.log(email, password);
     
 
-    const user = await User.findOne({ email });
-    // if (user && !user.verified) {
-    //   res.status(StatusCodes.UNAUTHORIZED).json({ error: "User not verified by admin", status: "not verified" });
-    //   return;
-    // }
+//     const user = await User.findOne({ email });
+//     // if (user && !user.verified) {
+//     //   res.status(StatusCodes.UNAUTHORIZED).json({ error: "User not verified by admin", status: "not verified" });
+//     //   return;
+//     // }
 
-    if (!user) {
-      res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });
-      return;
-    }
+//     if (!user) {
+//       res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });
+//       return;
+//     }
 
-    const isPasswordCorrect = await user.comparePassword(password);
-    if (!isPasswordCorrect) {
-      res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });
-      return;
-    }
-    const { name: userName, email: userEmail,_id:_id } = user;
-    const token = createJWT({ name: userName, email: userEmail,_id: user.id });
-    res.status(StatusCodes.CREATED).json({ user: { name: userName, email: userEmail }, token });;
-  } catch (error) {
-    console.error(error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "An error occurred. Please try again later." });
-  }
-};
+//     const isPasswordCorrect = await user.comparePassword(password);
+//     if (!isPasswordCorrect) {
+//       res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid Credentials" });
+//       return;
+//     }
+//     const { name: userName, email: userEmail,_id:_id } = user;
+//     const token = createJWT({ name: userName, email: userEmail,_id: user.id });
+//     res.status(StatusCodes.CREATED).json({ user: { name: userName, email: userEmail }, token });;
+//   } catch (error) {
+//     console.error(error);
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "An error occurred. Please try again later." });
+//   }
+// };
 
 /**
  * Logs out the current user by clearing the authentication cookie.
